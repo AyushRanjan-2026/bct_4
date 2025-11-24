@@ -573,7 +573,7 @@ function InsurerDashboard() {
                       const result = await createDID();
                       if (result && result.success) {
                         setInsurerDid(result.did);
-                        storeDID(wallet.account, 'insurer', result.did);
+                        storeDIDUnique(wallet.account, 'insurer', result.did);
                         showToast('Insurer DID created successfully!', 'success');
                       } else {
                         showToast(result?.error || 'Failed to create DID', 'error');

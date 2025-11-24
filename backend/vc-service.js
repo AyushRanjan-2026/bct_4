@@ -65,6 +65,17 @@ export async function createDID() {
 export async function issueVC(credential, issuerDid) {
   try {
     const veramoAgent = await getAgent();
+
+    // DEBUG: Check if DID exists
+    const managedDids = await veramoAgent.didManagerFind({ did: issuerDid });
+    if (managedDids.length === 0) {
+      console.error(`❌ CRITICAL: Issuer DID ${issuerDid} NOT found in agent store!`);
+      const allDids = await veramoAgent.didManagerFind();
+      console.log(`ℹ️ Agent has ${allDids.length} DIDs. First 5:`, allDids.slice(0, 5).map(d => d.did));
+    } else {
+      console.log(`✅ Issuer DID ${issuerDid} found in agent store.`);
+    }
+
     const verifiableCredential = await veramoAgent.createVerifiableCredential({
       credential: {
         ...credential,

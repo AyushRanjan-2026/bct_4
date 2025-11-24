@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createDID, addPolicyRequest, getPolicyRequests, issueVC, createRoleCredential } from './vc-service.js';
 import { createOnChainPolicy } from './contract-service.js';
+import { saveClaim, getClaimsByProvider, getClaimsByPatient, updateClaimStatus } from './claims-storage.js';
 
 dotenv.config();
 
@@ -52,6 +53,29 @@ app.post('/policy/request', (req, res) => {
     res.json({ success: true, request });
   } catch (error) {
     console.error('Policy request failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- Claims -------------------------------------------------
+app.get('/claims/provider/:wallet', (req, res) => {
+  try {
+    const { wallet } = req.params;
+    const claims = getClaimsByProvider(wallet);
+    res.json({ success: true, claims });
+  } catch (error) {
+    console.error('Get provider claims failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/claims/patient/:wallet', (req, res) => {
+  try {
+    const { wallet } = req.params;
+    const claims = getClaimsByPatient(wallet);
+    res.json({ success: true, claims });
+  } catch (error) {
+    console.error('Get patient claims failed:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

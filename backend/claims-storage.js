@@ -72,6 +72,20 @@ export function getClaimsByProvider(providerWallet) {
     }
 }
 
+// Get claims by patient wallet
+export function getClaimsByPatient(patientWallet) {
+    try {
+        const claims = getStoredClaims();
+        return claims.filter(
+            claim => claim.patientAddress?.toLowerCase() === patientWallet.toLowerCase() ||
+                claim.patientWallet?.toLowerCase() === patientWallet.toLowerCase()
+        );
+    } catch (error) {
+        console.error('Error getting claims by patient:', error);
+        return [];
+    }
+}
+
 // Update claim status
 export function updateClaimStatus(claimId, status, additionalData = {}) {
     try {
