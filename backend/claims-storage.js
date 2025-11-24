@@ -78,7 +78,9 @@ export function getClaimsByPatient(patientWallet) {
         const claims = getStoredClaims();
         return claims.filter(
             claim => claim.patientAddress?.toLowerCase() === patientWallet.toLowerCase() ||
-                claim.patientWallet?.toLowerCase() === patientWallet.toLowerCase()
+                claim.patientWallet?.toLowerCase() === patientWallet.toLowerCase() ||
+                claim.patientWalletOrDid?.toLowerCase() === patientWallet.toLowerCase() ||
+                claim.patientDid?.toLowerCase() === patientWallet.toLowerCase()
         );
     } catch (error) {
         console.error('Error getting claims by patient:', error);

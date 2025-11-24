@@ -77,7 +77,7 @@ function ProviderDashboard() {
     setLoadingClaims(true);
     try {
       const result = await getProviderClaims(wallet.account);
-      if (result.ok && result.claims) {
+      if (result.success && result.claims) {
         setSubmittedClaims(result.claims);
       }
     } catch (error) {

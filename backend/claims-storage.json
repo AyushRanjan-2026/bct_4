@@ -48,5 +48,61 @@
     "status": "Submitted",
     "createdAt": "2025-11-24T05:20:27.014Z",
     "claimId": "claim-1763961627014"
+  },
+  {
+    "providerWallet": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "provider": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "patientDid": "545",
+    "patientWalletOrDid": "545",
+    "policyId": "545",
+    "amount": "4.545e+21",
+    "amountWei": "4.545e+21",
+    "fileCids": [],
+    "treatmentVcCid": null,
+    "status": "Submitted",
+    "createdAt": "2025-11-24T12:35:40.514Z",
+    "claimId": "claim-1763987740514"
+  },
+  {
+    "providerWallet": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "provider": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "patientDid": "4",
+    "patientWalletOrDid": "4",
+    "policyId": "4",
+    "amount": "4000000000000000000",
+    "amountWei": "4000000000000000000",
+    "fileCids": [],
+    "treatmentVcCid": null,
+    "status": "Submitted",
+    "createdAt": "2025-11-24T12:39:03.770Z",
+    "claimId": "claim-1763987943770"
+  },
+  {
+    "providerWallet": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "provider": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "patientDid": "434",
+    "patientWalletOrDid": "434",
+    "policyId": "4343",
+    "amount": "434000000000000000000",
+    "amountWei": "434000000000000000000",
+    "fileCids": [],
+    "treatmentVcCid": null,
+    "status": "Submitted",
+    "createdAt": "2025-11-24T12:45:57.720Z",
+    "claimId": "claim-1763988357720"
+  },
+  {
+    "providerWallet": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "provider": "0x862b284dc03e4026dd59460d43d7834b10c7a082",
+    "patientDid": "5",
+    "patientWalletOrDid": "5",
+    "policyId": "5",
+    "amount": "5000000000000000000",
+    "amountWei": "5000000000000000000",
+    "fileCids": [],
+    "treatmentVcCid": null,
+    "status": "Submitted",
+    "createdAt": "2025-11-24T12:46:43.654Z",
+    "claimId": "claim-1763988403655"
   }
 ]

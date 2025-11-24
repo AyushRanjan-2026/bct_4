@@ -330,109 +330,149 @@ function PatientDashboard() {
 
       {/* Policy Request Form Card */}
       <div className="card animate-slide-up">
-        <div className="flex items-center mb-6">
-          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-            <span className="text-2xl">📋</span>
+        <div className="flex items-center mb-8">
+          <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center mr-4 shadow-lg shadow-green-500/30">
+            <span className="text-3xl">📋</span>
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Request Policy</h2>
-            <p className="text-sm text-gray-500">Submit a new medical policy request to insurers</p>
+            <h2 className="text-3xl font-bold text-gradient-animate">Request Policy</h2>
+            <p className="text-sm text-gray-600 mt-1">Submit a new medical policy request to insurers</p>
           </div>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); handleRequestPolicy(); }} className="space-y-4">
-          <div>
-            <label className="label">
-              Coverage Amount (in wei) <span className="text-red-500">*</span>
+        <form onSubmit={(e) => { e.preventDefault(); handleRequestPolicy(); }} className="space-y-6">
+          {/* Coverage Amount Section */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-100">
+            <label className="label flex items-center">
+              <span className="text-2xl mr-2">💰</span>
+              Coverage Amount (in wei) <span className="text-red-500 ml-1">*</span>
             </label>
-            <input
-              type="text"
-              value={coverageAmount}
-              onChange={(e) => setCoverageAmount(e.target.value)}
-              placeholder="1000000000000000000"
-              className="input-field"
-              required
-            />
-            <div className="mt-2 space-y-1">
-              <p className="text-xs text-gray-500">
-                <strong>Example values:</strong>
+            <div className="input-group">
+              <span className="input-icon text-lg">💎</span>
+              <input
+                type="text"
+                value={coverageAmount}
+                onChange={(e) => setCoverageAmount(e.target.value)}
+                placeholder="1000000000000000000"
+                className="input-field input-with-icon"
+                required
+              />
+            </div>
+            <div className="mt-4 bg-white/60 rounded-xl p-4 backdrop-blur-sm">
+              <p className="text-xs font-semibold text-gray-700 mb-2">
+                <span className="text-lg mr-1">📊</span> Example values:
               </p>
-              <ul className="text-xs text-gray-500 list-disc list-inside space-y-1 ml-2">
-                <li><code className="bg-gray-100 px-1 rounded">1000000000000000000</code> = 1 ETH coverage</li>
-                <li><code className="bg-gray-100 px-1 rounded">500000000000000000</code> = 0.5 ETH coverage</li>
-                <li><code className="bg-gray-100 px-1 rounded">100000000000000000</code> = 0.1 ETH coverage</li>
+              <ul className="text-xs text-gray-600 space-y-2">
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  <code className="bg-blue-100 px-2 py-1 rounded-lg font-mono">1000000000000000000</code>
+                  <span className="ml-2">= 1 ETH coverage</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
+                  <code className="bg-indigo-100 px-2 py-1 rounded-lg font-mono">500000000000000000</code>
+                  <span className="ml-2">= 0.5 ETH coverage</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                  <code className="bg-purple-100 px-2 py-1 rounded-lg font-mono">100000000000000000</code>
+                  <span className="ml-2">= 0.1 ETH coverage</span>
+                </li>
               </ul>
-              <p className="text-xs text-gray-400 mt-2">
-                💡 Tip: 1 ETH = 1,000,000,000,000,000,000 wei (10^18)
+              <p className="text-xs text-gray-500 mt-3 flex items-center">
+                <span className="mr-1">💡</span> Tip: 1 ETH = 1,000,000,000,000,000,000 wei (10^18)
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">
-                Premium <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={premium}
-                onChange={(e) => setPremium(e.target.value)}
-                placeholder="e.g., 100"
-                className="input-field"
-                required
-              />
-            </div>
+          {/* Policy Details Grid */}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-100">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <span className="text-2xl mr-2">📝</span>
+              Policy Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="label flex items-center">
+                  <span className="text-xl mr-2">💵</span>
+                  Premium <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-icon">$</span>
+                  <input
+                    type="text"
+                    value={premium}
+                    onChange={(e) => setPremium(e.target.value)}
+                    placeholder="e.g., 100"
+                    className="input-field input-with-icon"
+                    required
+                  />
+                </div>
+              </div>
 
-            <div>
-              <label className="label">
-                Duration (months) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                placeholder="e.g., 12"
-                className="input-field"
-                required
-              />
-            </div>
+              <div>
+                <label className="label flex items-center">
+                  <span className="text-xl mr-2">⏱️</span>
+                  Duration (months) <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-icon">📅</span>
+                  <input
+                    type="text"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    placeholder="e.g., 12"
+                    className="input-field input-with-icon"
+                    required
+                  />
+                </div>
+              </div>
 
-            <div>
-              <label className="label">
-                Coverage Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={coverageType}
-                onChange={(e) => setCoverageType(e.target.value)}
-                className="input-field"
-                required
-              >
-                <option value="">Select coverage type</option>
-                <option value="comprehensive">Comprehensive</option>
-                <option value="basic">Basic</option>
-                <option value="premium">Premium</option>
-                <option value="standard">Standard</option>
-              </select>
-            </div>
+              <div>
+                <label className="label flex items-center">
+                  <span className="text-xl mr-2">🏥</span>
+                  Coverage Type <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-icon">📋</span>
+                  <select
+                    value={coverageType}
+                    onChange={(e) => setCoverageType(e.target.value)}
+                    className="input-field input-with-icon"
+                    required
+                  >
+                    <option value="">Select coverage type</option>
+                    <option value="comprehensive">🌟 Comprehensive</option>
+                    <option value="basic">📄 Basic</option>
+                    <option value="premium">💎 Premium</option>
+                    <option value="standard">✅ Standard</option>
+                  </select>
+                </div>
+              </div>
 
-            <div>
-              <label className="label">
-                Deductible <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={deductible}
-                onChange={(e) => setDeductible(e.target.value)}
-                placeholder="e.g., 500"
-                className="input-field"
-                required
-              />
+              <div>
+                <label className="label flex items-center">
+                  <span className="text-xl mr-2">🔻</span>
+                  Deductible <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-icon">$</span>
+                  <input
+                    type="text"
+                    value={deductible}
+                    onChange={(e) => setDeductible(e.target.value)}
+                    placeholder="e.g., 500"
+                    className="input-field input-with-icon"
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           <button
             type="submit"
-            className="btn btn-success w-full sm:w-auto"
+            className="btn btn-success w-full text-base py-3"
             disabled={loading || !did || !wallet?.account}
           >
             {loading ? (
@@ -509,10 +549,20 @@ function PatientDashboard() {
               </div>
 
               {/* Verification Status */}
-              <div className="mt-6 pt-4 border-t border-gray-200 flex items-center space-x-2">
-                <span className="text-2xl">🔒</span>
-                <span className="text-[#2E8B57] font-semibold">Verified</span>
-                <span className="text-green-600">✓</span>
+              <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl">🔒</span>
+                  <span className="text-[#2E8B57] font-semibold">Verified</span>
+                  <span className="text-green-600">✓</span>
+                </div>
+
+                {/* Blockchain Badge */}
+                {vcInfo.credentialSubject?.blockchainVerified && (
+                  <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+                    <span>⛓️</span>
+                    <span>On-Chain</span>
+                  </div>
+                )}
               </div>
 
               {/* QR Code */}
@@ -562,9 +612,9 @@ function PatientDashboard() {
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      request.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                        request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
+                    request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
                     }`}>
                     {request.status || 'pending'}
                   </span>

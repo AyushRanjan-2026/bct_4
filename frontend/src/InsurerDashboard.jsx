@@ -184,10 +184,8 @@ function InsurerDashboard() {
     try {
       const result = await getClaims();
       if (result.success) {
-        const insurerClaims = (result.claims || []).filter(
-          claim => claim.insurer?.toLowerCase() === wallet?.account?.toLowerCase()
-        );
-        setClaims(insurerClaims);
+        // Show all claims - insurers review all submitted claims
+        setClaims(result.claims || []);
       }
     } catch (error) {
       console.error('Error loading claims:', error);
@@ -262,7 +260,17 @@ function InsurerDashboard() {
       const result = await issueCredential(payload);
 
       if (result.success) {
-        showToast('VC issued successfully!', 'success');
+        // Check if on-chain transaction was created
+        if (result.txHash) {
+          showToast(
+            `VC issued successfully! On-chain policy created. TX: ${result.txHash.substring(0, 10)}...`,
+            'success'
+          );
+          console.log('🔗 Blockchain Transaction:', result.txHash);
+          console.log('🔍 View on Explorer:', `https://etherscan.io/tx/${result.txHash}`);
+        } else {
+          showToast('VC issued successfully!', 'success');
+        }
         setShowIssueModal(false);
         loadRequests();
         loadIssuedVCs();

@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createDID, addPolicyRequest, getPolicyRequests, issueVC, createRoleCredential } from './vc-service.js';
 import { createOnChainPolicy } from './contract-service.js';
-import { saveClaim, getClaimsByProvider, getClaimsByPatient, updateClaimStatus } from './claims-storage.js';
+import { saveClaim, getClaimsByProvider, getClaimsByPatient, updateClaimStatus, getStoredClaims } from './claims-storage.js';
 
 dotenv.config();
 
@@ -316,8 +316,7 @@ app.get('/identity/byWallet/:address', async (req, res) => {
 // --- Claims Management ------------------------------------
 app.get('/claims', async (_req, res) => {
   try {
-    const { getAllClaims } = await import('./claims-service.js');
-    const claims = await getAllClaims();
+    const claims = getStoredClaims();
     res.json({ success: true, claims });
   } catch (error) {
     console.error('Get claims failed:', error);
