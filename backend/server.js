@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createDID, addPolicyRequest, getPolicyRequests, issueVC, createRoleCredential } from './vc-service.js';
+import { createOnChainPolicy } from './contract-service.js';
 
 dotenv.config();
 
@@ -63,6 +64,48 @@ app.get('/policy/requests', (_req, res) => {
   }
 });
 
+// Reject policy request
+app.post('/policy/reject', async (req, res) => {
+  try {
+    const { requestId, reason, insurerDid } = req.body;
+
+    if (!requestId || !reason) {
+      return res.status(400).json({
+        ok: false,
+        error: 'requestId and reason are required',
+      });
+    }
+
+    const { updatePolicyRequestStatus } = await import('./vc-service.js');
+
+    // Update request status to rejected
+    const updated = updatePolicyRequestStatus(requestId, 'rejected', {
+      rejectionReason: reason,
+      rejectedBy: insurerDid,
+      rejectedAt: new Date().toISOString(),
+    });
+
+    if (updated) {
+      res.json({
+        ok: true,
+        success: true,
+        message: 'Policy request rejected successfully',
+      });
+    } else {
+      res.status(404).json({
+        ok: false,
+        error: 'Request not found',
+      });
+    }
+  } catch (error) {
+    console.error('Reject policy request failed:', error);
+    res.status(500).json({
+      ok: false,
+      error: error.message || 'Failed to reject policy request',
+    });
+  }
+});
+
 // --- Generic VC issuance ------------------------------------
 app.post('/vc/issue', async (req, res) => {
   try {
@@ -77,10 +120,35 @@ app.post('/vc/issue', async (req, res) => {
     const credential = createRoleCredential({ issuerDid, subjectDid, role, data });
     const result = await issueVC(credential, issuerDid);
 
+    let txHash = null;
+    if (data.createOnChainPolicy) {
+      try {
+        console.log('Creating on-chain policy...');
+        // Use beneficiary wallet from data or fallback to subjectDid if it looks like an address
+        const beneficiary = data.beneficiary || (subjectDid.startsWith('0x') ? subjectDid : null);
+
+        if (beneficiary) {
+          const txResult = await createOnChainPolicy(
+            beneficiary,
+            data.coverageAmount || 0,
+            process.env.PRIVATE_KEY // Ensure this is set in .env
+          );
+          txHash = txResult.hash;
+          console.log('On-chain policy created:', txHash);
+        } else {
+          console.warn('Skipping on-chain policy: No valid beneficiary address found');
+        }
+      } catch (chainError) {
+        console.error('Failed to create on-chain policy:', chainError);
+        // We don't fail the whole request, just log the error
+      }
+    }
+
     res.json({
       success: true,
       vc: result.vc,
       cid: result.cid,
+      txHash: txHash
     });
   } catch (error) {
     console.error('VC issuance failed:', error);
@@ -97,7 +165,7 @@ app.get('/vc/policy/:policyId', async (req, res) => {
     const { policyId } = req.params;
     const { getVCByPolicyId } = await import('./vc-service.js');
     const vc = getVCByPolicyId(policyId);
-    
+
     if (vc) {
       res.json({ success: true, vc });
     } else {
@@ -131,7 +199,7 @@ app.get('/verification/did', async (req, res) => {
     try {
       // Resolve DID document
       const didDocument = await agent.resolveDid({ didUrl: did });
-      
+
       if (didDocument && didDocument.didDocument) {
         res.json({
           success: true,
@@ -168,7 +236,7 @@ app.post('/file/upload', async (req, res) => {
   try {
     const { uploadToIPFS } = await import('./ipfs-service.js');
     let buffer;
-    
+
     // Check if it's multipart form data (FormData sends as raw body)
     if (req.is('multipart/form-data') || req.headers['content-type']?.includes('multipart/form-data')) {
       // For multipart, we need to parse it manually or use a library
@@ -192,7 +260,7 @@ app.post('/file/upload', async (req, res) => {
         error: 'File data required (base64 encoded)',
       });
     }
-    
+
     const cid = await uploadToIPFS(buffer);
     res.json({ ok: true, success: true, cid });
   } catch (error) {
@@ -239,7 +307,7 @@ app.get('/claims', async (_req, res) => {
 app.post('/claims/submit', async (req, res) => {
   try {
     const { providerWallet, patientDidOrWallet, policyId, amountWei, fileCids, treatmentVcCid } = req.body;
-    
+
     if (!providerWallet || !patientDidOrWallet || !policyId || !amountWei) {
       return res.status(400).json({
         ok: false,
@@ -247,19 +315,37 @@ app.post('/claims/submit', async (req, res) => {
       });
     }
 
-    // Call the existing onchain submit claim logic
-    const { onchainSubmitClaim } = await import('./contract-service.js');
-    // This is a stub - implement actual claim submission
-    // For now, return a mock response
+    // Try saving to JSON storage first (for development/demo)
+    const { saveClaim } = await import('./claims-storage.js');
+
+    const claimData = {
+      providerWallet: providerWallet.toLowerCase(),
+      provider: providerWallet.toLowerCase(), // Alias for compatibility
+      patientDid: patientDidOrWallet,
+      patientWalletOrDid: patientDidOrWallet,
+      policyId,
+      amount: amountWei,
+      amountWei,
+      fileCids: Array.isArray(fileCids) ? fileCids : (fileCids ? fileCids.split(',') : []),
+      treatmentVcCid: treatmentVcCid || null,
+      status: 'Submitted',
+      createdAt: new Date().toISOString(),
+    };
+
+    const savedClaim = saveClaim(claimData);
+
     res.json({
       ok: true,
-      claimId: `clm-${Date.now()}`,
-      txHash: '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+      success: true,
+      claimId: savedClaim.claimId,
+      message: 'Claim submitted successfully (JSON storage)',
+      ...savedClaim
     });
   } catch (error) {
     console.error('Submit claim failed:', error);
     res.status(500).json({
       ok: false,
+      success: false,
       error: error.message || 'Failed to submit claim',
     });
   }
@@ -268,12 +354,11 @@ app.post('/claims/submit', async (req, res) => {
 app.get('/claims/provider/:wallet', async (req, res) => {
   try {
     const { wallet } = req.params;
-    // Get claims for this provider from blockchain
-    const { getAllClaims } = await import('./claims-service.js');
-    const allClaims = await getAllClaims();
-    const providerClaims = allClaims.filter(
-      claim => claim.provider?.toLowerCase() === wallet.toLowerCase()
-    );
+
+    // Try JSON storage first
+    const { getClaimsByProvider } = await import('./claims-storage.js');
+    const providerClaims = getClaimsByProvider(wallet);
+
     res.json({ ok: true, claims: providerClaims });
   } catch (error) {
     console.error('Get provider claims failed:', error);
@@ -287,17 +372,17 @@ app.get('/claims/provider/:wallet', async (req, res) => {
 app.post('/claims/approve', async (req, res) => {
   try {
     const { claimId, insurerDid, insurerAddress, privateKey } = req.body;
-    
+
     if (!claimId || !insurerDid || !insurerAddress || !privateKey) {
       return res.status(400).json({
         success: false,
         error: 'claimId, insurerDid, insurerAddress, and privateKey are required',
       });
     }
-    
+
     const { approveClaim } = await import('./claims-service.js');
     const result = await approveClaim(claimId, insurerDid, insurerAddress, privateKey);
-    
+
     res.json(result);
   } catch (error) {
     console.error('Approve claim failed:', error);
@@ -311,17 +396,17 @@ app.post('/claims/approve', async (req, res) => {
 app.post('/claims/reject', async (req, res) => {
   try {
     const { claimId, reason, insurerDid, insurerAddress, privateKey } = req.body;
-    
+
     if (!claimId || !reason || !insurerDid || !insurerAddress || !privateKey) {
       return res.status(400).json({
         success: false,
         error: 'claimId, reason, insurerDid, insurerAddress, and privateKey are required',
       });
     }
-    
+
     const { rejectClaim } = await import('./claims-service.js');
     const result = await rejectClaim(claimId, reason, insurerDid, insurerAddress, privateKey);
-    
+
     res.json(result);
   } catch (error) {
     console.error('Reject claim failed:', error);

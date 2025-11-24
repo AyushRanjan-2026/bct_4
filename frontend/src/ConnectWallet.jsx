@@ -82,6 +82,9 @@ function ConnectWallet({ onWalletConnected }) {
     if (onWalletConnected) {
       onWalletConnected({ account: null, provider: null, signer: null });
     }
+    // Note: We cannot programmatically disconnect from MetaMask
+    // The user must manually disconnect in MetaMask extension
+    alert('Wallet disconnected from the app. To fully disconnect, please disconnect from MetaMask extension.');
   };
 
   return (

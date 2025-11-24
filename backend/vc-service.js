@@ -181,3 +181,11 @@ export function createRoleCredential({ issuerDid, subjectDid, role, data = {} })
   };
 }
 
+export function updatePolicyRequestStatus(requestId, status, additionalData = {}) {
+  const reqs = loadPolicyRequests();
+  const reqIndex = reqs.findIndex(r => r.id === requestId);
+  if (reqIndex === -1) return null;
+  reqs[reqIndex] = { ...reqs[reqIndex], status, ...additionalData, updatedAt: new Date().toISOString() };
+  savePolicyRequests(reqs);
+  return reqs[reqIndex];
+}

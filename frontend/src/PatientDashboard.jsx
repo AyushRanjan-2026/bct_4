@@ -3,7 +3,7 @@ import { createDID, requestPolicy, issueCredential, getPolicyRequests } from './
 import ConnectWallet from './ConnectWallet';
 import CollapsibleCard from './components/CollapsibleCard';
 import QRCode from 'qrcode';
-import { storeDID, getDID } from './did-storage';
+import { storeDID, getDID, removeDID } from './did-storage';
 import { formatDate, weiToEth } from './utils/formatting';
 
 function PatientDashboard() {
@@ -76,7 +76,7 @@ function PatientDashboard() {
           req => req.patientDid === did || req.patientAddress === wallet?.account
         );
         setPolicyRequests(patientRequests);
-        
+
         // Check for VCs for each request
         patientRequests.forEach(request => {
           if (request.id) {
@@ -106,7 +106,7 @@ function PatientDashboard() {
 
   const loadPatientClaims = async () => {
     if (!wallet?.account) return;
-    
+
     setLoadingClaims(true);
     try {
       // Try to fetch claims from backend endpoint
@@ -174,6 +174,14 @@ function PatientDashboard() {
       setMessage({ type: 'error', text: errorMessage });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetIdentity = () => {
+    if (wallet?.account) {
+      removeDID(wallet.account, 'patient');
+      setDid(null);
+      setMessage({ type: 'success', text: 'Identity reset. You can now create a new DID.' });
     }
   };
 
@@ -286,15 +294,23 @@ function PatientDashboard() {
               <p className="font-mono text-sm text-gray-700 break-all bg-white p-3 rounded border border-gray-200">
                 {did}
               </p>
-              <p className="text-xs text-gray-500 mt-2">
-                ✓ Your DID has been created successfully. You can now generate credentials and request policies.
-              </p>
+              <div className="flex justify-between items-start mt-2">
+                <p className="text-xs text-gray-500">
+                  ✓ Your DID has been created successfully. You can now generate credentials and request policies.
+                </p>
+                <button
+                  onClick={handleResetIdentity}
+                  className="text-xs text-red-500 hover:text-red-700 underline ml-2 whitespace-nowrap"
+                >
+                  Reset Identity
+                </button>
+              </div>
             </div>
           </div>
         ) : (
-          <button 
+          <button
             className="btn btn-primary w-full sm:w-auto"
-            onClick={handleCreateDID} 
+            onClick={handleCreateDID}
             disabled={loading}
           >
             {loading ? (
@@ -446,7 +462,7 @@ function PatientDashboard() {
               <p className="text-sm text-gray-500">Your digitally signed policy certificate issued by insurer</p>
             </div>
           </div>
-          
+
           {vcInfo ? (
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-lg border-2 border-gray-200 p-6 shadow-lg">
               {/* Certificate Display */}
@@ -455,35 +471,35 @@ function PatientDashboard() {
                   <span className="text-[#8B4513] font-semibold text-sm">Credential Type:</span>
                   <span className="text-[#2E8B57] font-medium">{vcInfo.credentialSubject?.credentialType || 'Insurance Policy'}</span>
                 </div>
-                
+
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <span className="text-[#8B4513] font-semibold text-sm">Issuer:</span>
                   <span className="text-[#2E8B57] font-mono text-xs">
                     {vcInfo.issuer?.id ? (vcInfo.issuer.id.length > 20 ? `${vcInfo.issuer.id.substring(0, 20)}...` : vcInfo.issuer.id) : 'N/A'}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <span className="text-[#8B4513] font-semibold text-sm">Issued To:</span>
                   <span className="text-[#2E8B57] font-mono text-xs">
-                    {vcInfo.credentialSubject?.id 
-                      ? (vcInfo.credentialSubject.id.length > 20 
-                          ? `${vcInfo.credentialSubject.id.substring(0, 20)}...` 
-                          : vcInfo.credentialSubject.id)
+                    {vcInfo.credentialSubject?.id
+                      ? (vcInfo.credentialSubject.id.length > 20
+                        ? `${vcInfo.credentialSubject.id.substring(0, 20)}...`
+                        : vcInfo.credentialSubject.id)
                       : 'N/A'}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <span className="text-[#8B4513] font-semibold text-sm">Policy Number:</span>
                   <span className="text-[#2E8B57] font-medium">{vcInfo.credentialSubject?.policyNumber || vcInfo.credentialSubject?.policyId || 'N/A'}</span>
                 </div>
-                
+
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <span className="text-[#8B4513] font-semibold text-sm">Valid Till:</span>
                   <span className="text-[#2E8B57] font-medium">{vcInfo.credentialSubject?.validTill || 'N/A'}</span>
                 </div>
-                
+
                 {vcInfo.credentialSubject?.coverageAmount && (
                   <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                     <span className="text-[#8B4513] font-semibold text-sm">Coverage Amount:</span>
@@ -491,14 +507,14 @@ function PatientDashboard() {
                   </div>
                 )}
               </div>
-              
+
               {/* Verification Status */}
               <div className="mt-6 pt-4 border-t border-gray-200 flex items-center space-x-2">
                 <span className="text-2xl">🔒</span>
                 <span className="text-[#2E8B57] font-semibold">Verified</span>
                 <span className="text-green-600">✓</span>
               </div>
-              
+
               {/* QR Code */}
               {vcQr && (
                 <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col items-center">
@@ -545,12 +561,11 @@ function PatientDashboard() {
                       Submitted: {new Date(request.createdAt || Date.now()).toLocaleString()}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    request.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                    }`}>
                     {request.status || 'pending'}
                   </span>
                 </div>
@@ -628,7 +643,7 @@ function PatientDashboard() {
                     {getStatusLabel(claim.status || claim.state)}
                   </span>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3">
                   <div>
                     <span className="text-gray-600">Policy ID:</span>

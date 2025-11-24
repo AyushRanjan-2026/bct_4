@@ -54,3 +54,29 @@ export async function getSigner(privateKey) {
   return new ethers.Wallet(privateKey, provider);
 }
 
+
+export async function createOnChainPolicy(beneficiary, coverageAmount, privateKey) {
+  try {
+    const signer = await getSigner(privateKey);
+    const policyContract = getContract('PolicyContract', signer);
+
+    console.log(`Creating on-chain policy for ${beneficiary} with coverage ${coverageAmount}...`);
+    const tx = await policyContract.issuePolicy(beneficiary, coverageAmount);
+    console.log('Transaction sent:', tx.hash);
+
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash);
+
+    // Extract policyId from events if needed
+    // const event = receipt.logs.find(...) 
+
+    return {
+      success: true,
+      hash: receipt.hash,
+      blockNumber: receipt.blockNumber
+    };
+  } catch (error) {
+    console.error('Error creating on-chain policy:', error);
+    throw error;
+  }
+}

@@ -5,80 +5,83 @@ import ProviderDashboard from './ProviderDashboard';
 import './index.css';
 
 function App() {
-  // Initialize state from localStorage or default to 'patient'
+  // Initialize activeTab from localStorage or default to 'patient'
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('activeTab') || 'patient';
   });
 
-  // Update localStorage whenever activeTab changes
+  // Persist activeTab to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('activeTab', activeTab);
   }, [activeTab]);
 
-  const tabs = [
-    { id: 'patient', label: 'Patient', icon: '👤' },
-    { id: 'insurer', label: 'Insurer', icon: '🏢' },
-    { id: 'provider', label: 'Provider', icon: '🏥' },
-  ];
+  const renderDashboard = () => {
+    switch (activeTab) {
+      case 'patient':
+        return <PatientDashboard />;
+      case 'insurer':
+        return <InsurerDashboard />;
+      case 'provider':
+        return <ProviderDashboard />;
+      default:
+        return <PatientDashboard />;
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-      {/* Navigation Bar */}
-      <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-4 group cursor-pointer" onClick={() => setActiveTab('patient')}>
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform duration-300">
-                <span className="text-white text-2xl font-bold">M</span>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background Gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 opacity-90"></div>
+      <div className="fixed inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20"></div>
+
+      <div className="relative z-10">
+        {/* Header with Glass Effect */}
+        <header className="glass-effect shadow-2xl sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3 animate-slide-in-right">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl flex items-center justify-center shadow-lg animate-float">
+                  <span className="text-2xl">🏥</span>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white drop-shadow-lg">MediChain</h1>
+                  <p className="text-xs text-white/80">Decentralized Healthcare Insurance</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent">
-                  MediChain
-                </h1>
-                <p className="text-xs text-gray-500 font-medium tracking-wider uppercase">Decentralized Insurance</p>
-              </div>
-            </div>
-            
-            <div className="flex bg-gray-100/50 p-1.5 rounded-xl border border-gray-200/50">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    relative px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center space-x-2
-                    ${activeTab === tab.id
-                      ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'
-                    }
-                  `}
-                >
-                  <span className="text-lg">{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+
+              {/* Navigation Tabs */}
+              <nav className="flex space-x-2 bg-white/10 backdrop-blur-md rounded-xl p-1.5 border border-white/20">
+                {['patient', 'insurer', 'provider'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-6 py-2.5 rounded-lg font-medium capitalize transition-all duration-300 ${activeTab === tab
+                        ? 'bg-white text-purple-600 shadow-lg transform scale-105'
+                        : 'text-white hover:bg-white/20 hover:scale-105'
+                      }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </nav>
             </div>
           </div>
-        </div>
-      </nav>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in">
-        <div className="transition-all duration-500 ease-in-out">
-          {activeTab === 'patient' && <PatientDashboard key="patient" />}
-          {activeTab === 'insurer' && <InsurerDashboard key="insurer" />}
-          {activeTab === 'provider' && <ProviderDashboard key="provider" />}
-        </div>
-      </main>
-      
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-auto py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>© {new Date().getFullYear()} MediChain. Secure Medical Policy Automation.</p>
-        </div>
-      </footer>
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+          {renderDashboard()}
+        </main>
+
+        {/* Footer */}
+        <footer className="mt-16 pb-8 text-center text-white/60 text-sm">
+          <p className="glass-effect inline-block px-6 py-3 rounded-full border border-white/20">
+            © 2024 MediChain • Powered by Blockchain Technology 🔗
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }
 
 export default App;
-

@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { getPolicyRequests, createDID, issueCredential, getClaims, approveClaim, rejectClaim, getVCByPolicyId, verifyVC, verifyDID } from './api';
 import { ethers } from 'ethers';
 import QRCode from 'qrcode';
-import { storeDID, getDID } from './did-storage';
+import { getDID, storeDIDUnique, getAnyDIDForWallet, removeDID } from './did-storage';
 import CollapsibleCard from './components/CollapsibleCard';
 import Toast from './components/Toast';
 import RequestDetailsModal from './components/RequestDetailsModal';
 import IssueVCModal from './components/IssueVCModal';
+import RejectRequestModal from './components/RejectRequestModal';
 import IssuedVCList from './components/IssuedVCList';
 import { weiToEth, formatDate } from './utils/formatting';
 import ConnectWallet from './ConnectWallet';
@@ -20,6 +21,7 @@ function InsurerDashboard() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const [insurerDid, setInsurerDid] = useState(null);
   const [vcForm, setVcForm] = useState({ organization: '', permission: '' });
   const [vcInfo, setVcInfo] = useState(null);
@@ -119,6 +121,32 @@ function InsurerDashboard() {
       setInsurerDid(null);
     }
   };
+
+  // Check for existing DID when wallet connects
+  useEffect(() => {
+    const checkExistingDID = async () => {
+      if (wallet?.account) {
+        // Try to get from local storage first
+        const localDid = getDID(wallet.account, 'insurer');
+        if (localDid) {
+          setInsurerDid(localDid);
+          return;
+        }
+
+        // If not in local storage, check backend (optional, but good practice)
+        try {
+          // const result = await getIdentityByWallet(wallet.account);
+          // if (result.ok && result.did) {
+          //   setInsurerDid(result.did);
+          //   storeDID(wallet.account, 'insurer', result.did);
+          // }
+        } catch (error) {
+          console.log('Error checking DID:', error);
+        }
+      }
+    };
+    checkExistingDID();
+  }, [wallet?.account]);
 
   const loadRequests = async () => {
     try {
@@ -227,6 +255,7 @@ function InsurerDashboard() {
           validTill: validTill.toISOString().split('T')[0],
           issuedAt: new Date().toISOString(),
           metadata: data.metadataJson,
+          createOnChainPolicy: data.createOnChainPolicy,
         },
       };
 
@@ -241,7 +270,50 @@ function InsurerDashboard() {
         showToast(result.error || 'Failed to issue VC', 'error');
       }
     } catch (error) {
-      showToast(error.message || 'Failed to issue VC', 'error');
+      console.error('Issue VC error:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to issue VC';
+
+      if (errorMessage.includes('Identifier not found') || errorMessage.includes('managed by this agent')) {
+        showToast('Backend cannot find your DID. Please click "Reset Identity" above and recreate your DID.', 'error');
+      } else {
+        showToast(errorMessage, 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectRequest = async (request, rejectionReason) => {
+    if (!wallet?.account || !insurerDid) {
+      showToast('Please connect wallet and create DID first', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Call backend to reject the request (to be implemented)
+      const response = await fetch(`http://localhost:3001/policy/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: request.id,
+          reason: rejectionReason,
+          insurerDid,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success || result.ok) {
+        showToast('Request rejected successfully!', 'success');
+        setShowRejectModal(false);
+        setSelectedRequest(null);
+        loadRequests();
+      } else {
+        showToast(result.error || 'Failed to reject request', 'error');
+      }
+    } catch (error) {
+      showToast(error.message || 'Failed to reject request', 'error');
     } finally {
       setLoading(false);
     }
@@ -370,6 +442,44 @@ function InsurerDashboard() {
     }
   };
 
+  const handleCreateInsurerDID = async () => {
+    if (!wallet?.account) {
+      showToast('Please connect wallet first before creating DID', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log('Creating Insurer DID...');
+      const result = await createDID();
+      console.log('DID creation result:', result);
+      if (result.success) {
+        const stored = storeDIDUnique(wallet.account, 'insurer', result.did);
+        if (stored) {
+          setInsurerDid(result.did);
+          showToast('Insurer DID created successfully!', 'success');
+        } else {
+          showToast('Failed to store DID - wallet may already have a DID for another role', 'error');
+        }
+      } else {
+        showToast(result.error || 'Failed to create DID', 'error');
+      }
+    } catch (error) {
+      console.error('Insurer DID creation error:', error);
+      showToast(error.message || 'Failed to create DID', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetIdentity = () => {
+    if (wallet?.account) {
+      removeDID(wallet.account, 'insurer');
+      setInsurerDid(null);
+      showToast('Identity reset. You can now create a new DID.', 'success');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -436,6 +546,12 @@ function InsurerDashboard() {
                   <p className="font-mono text-xs text-gray-700 break-all bg-white p-3 rounded border border-gray-100">
                     {insurerDid}
                   </p>
+                  <button
+                    onClick={handleResetIdentity}
+                    className="text-xs text-red-500 hover:text-red-700 mt-2 underline"
+                  >
+                    Reset Identity (Use if DID is invalid)
+                  </button>
                 </div>
                 <div className="flex items-center text-green-600 text-sm font-medium bg-green-50 p-3 rounded-lg">
                   <span className="mr-2">✓</span> Identity Verified
@@ -635,16 +751,28 @@ function InsurerDashboard() {
                         Verify DID
                       </button>
                       {request.status === 'pending' && (
-                        <button
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setShowIssueModal(true);
-                          }}
-                          disabled={loading || !insurerDid}
-                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
-                        >
-                          Issue Policy
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setShowIssueModal(true);
+                            }}
+                            disabled={loading || !insurerDid}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                          >
+                            Issue Policy
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setShowRejectModal(true);
+                            }}
+                            disabled={loading || !insurerDid}
+                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Reject
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -804,10 +932,26 @@ function InsurerDashboard() {
       <IssueVCModal
         request={selectedRequest}
         isOpen={showIssueModal}
-        onClose={() => setShowIssueModal(false)}
+        onClose={() => {
+          setShowIssueModal(false);
+          setSelectedRequest(null);
+        }}
         onConfirm={handleIssueVC}
         loading={loading}
       />
+
+      <RejectRequestModal
+        request={selectedRequest}
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setSelectedRequest(null);
+        }}
+        onConfirm={handleRejectRequest}
+        loading={loading}
+      />
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }

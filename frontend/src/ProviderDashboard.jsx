@@ -5,6 +5,7 @@ import CollapsibleCard from './components/CollapsibleCard';
 import UploadedFileList from './components/UploadedFileList';
 import QRCode from 'qrcode';
 import { formatDate, weiToEth } from './utils/formatting';
+import { getAnyDIDForWallet, storeDIDUnique } from './did-storage';
 
 function ProviderDashboard() {
   const [wallet, setWallet] = useState(null);
@@ -87,22 +88,44 @@ function ProviderDashboard() {
   };
 
   const handleCreateDID = async () => {
+    // First check if wallet is connected
+    if (!wallet?.account) {
+      setMessage({ type: 'error', text: 'Please connect your wallet first before creating a DID' });
+      return;
+    }
+
     if (did) {
       setMessage({ type: 'error', text: 'DID already exists for this wallet' });
       return;
     }
+
+    // Check if wallet already has a DID for any role
+    // const existing = getAnyDIDForWallet(wallet?.account);
+    // if (existing) {
+    //   setMessage({ type: 'error', text: `This wallet already has a DID for role: ${existing.role.toUpperCase()}. One wallet can only have one DID.` });
+    //   return;
+    // }
+
     setLoading(true);
     setMessage(null);
     try {
+      console.log('Creating Provider DID...');
       const result = await createDID();
+      console.log('DID creation result:', result);
       if (result.success) {
-        setDid(result.did);
-        setMessage({ type: 'success', text: 'Provider DID created successfully!' });
+        const stored = storeDIDUnique(wallet?.account, 'provider', result.did);
+        if (stored) {
+          setDid(result.did);
+          setMessage({ type: 'success', text: 'Provider DID created successfully!' });
+        } else {
+          setMessage({ type: 'error', text: 'Failed to store DID - wallet may already have a DID for another role' });
+        }
       } else {
         setMessage({ type: 'error', text: result.error || 'Failed to create DID' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to create DID' });
+      console.error('Provider DID creation error:', error);
+      setMessage({ type: 'error', text: error.message || 'Failed to create DID. Check if backend is running.' });
     } finally {
       setLoading(false);
     }
@@ -113,6 +136,10 @@ function ProviderDashboard() {
       setMessage({ type: 'error', text: 'Create your DID first' });
       return;
     }
+    if (!vcForm.facility || !vcForm.speciality) {
+      setMessage({ type: 'error', text: 'Please enter Facility and Speciality before generating credential' });
+      return;
+    }
     setLoading(true);
     setMessage(null);
     try {
@@ -121,8 +148,8 @@ function ProviderDashboard() {
         subjectDid: did,
         role: 'Provider',
         data: {
-          facility: vcForm.facility || 'Health Facility',
-          speciality: vcForm.speciality || 'General Practice',
+          facility: vcForm.facility,
+          speciality: vcForm.speciality,
           issuedAt: new Date().toISOString(),
         },
       };
@@ -237,10 +264,10 @@ function ProviderDashboard() {
   const handleClaimFileChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     setUploadingFile(true);
     setMessage(null);
-    
+
     // Upload each file sequentially
     for (const file of files) {
       try {
@@ -268,7 +295,7 @@ function ProviderDashboard() {
         setMessage({ type: 'error', text: `Failed to upload ${file.name}: ${error.message}` });
       }
     }
-    
+
     setUploadingFile(false);
     // Clear file input
     e.target.value = '';
@@ -307,7 +334,7 @@ function ProviderDashboard() {
       setMessage({ type: 'error', text: 'Amount must be greater than 0' });
       return;
     }
-    
+
     setLoading(true);
     setMessage(null);
     try {
@@ -324,7 +351,7 @@ function ProviderDashboard() {
 
       // Convert ETH to wei
       const amountWei = (parseFloat(claimForm.amount) * 1e18).toString();
-      
+
       // Get file CIDs from uploaded files
       const fileCids = claimUploadedFiles
         .filter(f => f.includeInClaim !== false)
@@ -342,9 +369,9 @@ function ProviderDashboard() {
       const result = await submitClaim(payload);
 
       if (result.ok) {
-        setMessage({ 
-          type: 'success', 
-          text: `Claim submitted — claimId: ${result.claimId}, txHash: ${result.txHash || 'N/A'}` 
+        setMessage({
+          type: 'success',
+          text: `Claim submitted — claimId: ${result.claimId}, txHash: ${result.txHash || 'N/A'}`
         });
         // Reload claims
         await loadProviderClaims();
@@ -368,14 +395,14 @@ function ProviderDashboard() {
         setMessage({ type: 'error', text: 'VC not available' });
         return;
       }
-      
+
       // If VC is a string (JWT format), use it directly
       if (typeof vc === 'string') {
         navigator.clipboard.writeText(vc);
         setMessage({ type: 'success', text: 'JWT copied to clipboard!' });
         return;
       }
-      
+
       // If VC is an object, try to find JWT in various places
       if (typeof vc === 'object') {
         // Check if it's in proof.jwt
@@ -392,7 +419,7 @@ function ProviderDashboard() {
           return;
         }
       }
-      
+
       setMessage({ type: 'error', text: 'JWT not found in VC' });
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to copy JWT: ' + error.message });
@@ -443,9 +470,9 @@ function ProviderDashboard() {
           </div>
         ) : (
           <div className="space-y-2">
-            <button 
-              className="btn btn-primary" 
-              onClick={handleCreateDID} 
+            <button
+              className="btn btn-primary"
+              onClick={handleCreateDID}
               disabled={loading || !wallet?.account}
             >
               {loading ? 'Creating DID...' : 'Create Provider DID'}
@@ -747,13 +774,12 @@ function ProviderDashboard() {
                       {claim.createdAt ? formatDate(claim.createdAt) : 'N/A'}
                     </p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    claim.status === 'submitted' || claim.status === 'Submitted' ? 'bg-yellow-100 text-yellow-800' :
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${claim.status === 'submitted' || claim.status === 'Submitted' ? 'bg-yellow-100 text-yellow-800' :
                     claim.status === 'onchainPending' ? 'bg-blue-100 text-blue-800' :
-                    claim.status === 'confirmed' || claim.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                    claim.status === 'rejected' || claim.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                      claim.status === 'confirmed' || claim.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                        claim.status === 'rejected' || claim.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                    }`}>
                     {claim.status || 'Unknown'}
                   </span>
                 </div>
@@ -769,8 +795,8 @@ function ProviderDashboard() {
                   <div>
                     <span className="text-gray-600">Amount:</span>
                     <p className="font-semibold text-gray-800">
-                      {claim.amount ? (typeof claim.amount === 'string' && claim.amount.includes('e') 
-                        ? weiToEth(claim.amount) 
+                      {claim.amount ? (typeof claim.amount === 'string' && claim.amount.includes('e')
+                        ? weiToEth(claim.amount)
                         : claim.amount) : 'N/A'} ETH
                     </p>
                   </div>
